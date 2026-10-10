@@ -1,0 +1,13 @@
+-- Extensions required by later migrations.
+--
+-- pgcrypto provides crypt()/gen_salt() (used to hash customer PINs). Primary
+-- keys use gen_random_uuid(), which has been a PostgreSQL core builtin
+-- since v13 and needs no extension.
+--
+-- Installed explicitly into the `extensions` schema (Supabase's
+-- convention, and where it already lives on every Supabase project) so
+-- that functions below can reliably find it via
+-- `set search_path = public, extensions` rather than depending on
+-- whatever the connection's ambient search_path happens to be. If it's
+-- already installed elsewhere, IF NOT EXISTS makes this a no-op.
+create extension if not exists pgcrypto with schema extensions;

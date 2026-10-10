@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#f4ddb0"/>
+  <text x="200" y="150" font-size="72" text-anchor="middle" dominant-baseline="central">🥯</text>
+  <text x="200" y="250" font-size="22" font-family="Arial, sans-serif" fill="#2b1d14" text-anchor="middle" opacity="0.65">Bun Butter</text>
+</svg>
