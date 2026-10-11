@@ -36,7 +36,7 @@ export default function CartPage() {
 
       <ul className="mt-6 flex flex-col divide-y divide-border rounded-[var(--radius-card)] border border-border bg-surface">
         {lines.map(({ product, quantity }) => (
-          <li key={product.id} className="flex items-center gap-4 p-4">
+          <li key={product.id} className="flex flex-wrap items-center gap-3 p-4 sm:flex-nowrap sm:gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-control)] bg-surface-muted">
               <Image
                 src={getProductImageUrl(product.imagePath)}
@@ -48,26 +48,28 @@ export default function CartPage() {
               />
             </div>
 
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{product.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-sm font-semibold text-foreground">{product.name}</p>
               <PriceDisplay amount={product.price} size="sm" />
             </div>
 
-            <QuantityStepper
-              label={product.name}
-              quantity={quantity}
-              onIncrease={() => setQuantity(product.id, quantity + 1)}
-              onDecrease={() => setQuantity(product.id, quantity - 1)}
-            />
+            <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+              <QuantityStepper
+                label={product.name}
+                quantity={quantity}
+                onIncrease={() => setQuantity(product.id, quantity + 1)}
+                onDecrease={() => setQuantity(product.id, quantity - 1)}
+              />
 
-            <button
-              type="button"
-              onClick={() => removeItem(product.id)}
-              aria-label={`Remove ${product.name} from cart`}
-              className="text-sm text-muted-foreground hover:text-danger"
-            >
-              Remove
-            </button>
+              <button
+                type="button"
+                onClick={() => removeItem(product.id)}
+                aria-label={`Remove ${product.name} from cart`}
+                className="rounded-[var(--radius-control)] text-sm text-muted-foreground hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                Remove
+              </button>
+            </div>
           </li>
         ))}
       </ul>

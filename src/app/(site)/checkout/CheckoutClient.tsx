@@ -30,7 +30,9 @@ export function CheckoutClient({
   const [isRevalidating, setIsRevalidating] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [placedOrder, setPlacedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; total: number } | null>(
+    null,
+  );
 
   // Generated once per mount (lazy initializer) and stays stable across
   // re-renders — sent with every "place order" attempt from this page
@@ -146,7 +148,7 @@ export function CheckoutClient({
       }
 
       clear();
-      setPlacedOrder({ orderNumber: data.order.orderNumber, total: data.order.total });
+      setPlacedOrder({ id: data.order.id, orderNumber: data.order.orderNumber, total: data.order.total });
     } finally {
       setIsSubmitting(false);
     }
@@ -161,7 +163,10 @@ export function CheckoutClient({
           Your order number is <span className="font-semibold text-foreground">{placedOrder.orderNumber}</span>.
           Pay {formatCurrency(placedOrder.total)} by cash on delivery.
         </p>
-        <div className="mt-6 flex justify-center gap-3">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link href={`/orders/${placedOrder.id}/bill`}>
+            <Button variant="outline">View Bill</Button>
+          </Link>
           <Link href="/orders">
             <Button>Track Order</Button>
           </Link>

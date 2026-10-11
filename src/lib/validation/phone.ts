@@ -24,7 +24,3 @@ export function normalizeIndianMobile(input: string): string | null {
 export function isValidPin(pin: string): boolean {
   return /^\d{4}$/.test(pin);
 }
-
-export function isValidOtp(otp: string): boolean {
-  return /^\d{6}$/.test(otp);
-}

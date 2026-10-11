@@ -15,11 +15,15 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <div className="flex min-h-screen flex-1 flex-col">
       <AdminTopbar staffEmail={staff.email} />
-      <AdminNav orientation="horizontal" />
       <div className="flex flex-1">
         <AdminNav orientation="vertical" />
-        <main className="flex-1 bg-surface-muted/40 p-4 sm:p-6">{children}</main>
+        {/* pb-16 reserves space for the fixed bottom nav on mobile
+            (AdminNav orientation="horizontal", md:hidden) so page content
+            never sits underneath it; md:pb-6 restores the normal padding
+            once that nav disappears at the md breakpoint. */}
+        <main className="flex-1 bg-surface-muted/40 p-4 pb-20 sm:px-6 md:pb-6">{children}</main>
       </div>
+      <AdminNav orientation="horizontal" />
     </div>
   );
 }

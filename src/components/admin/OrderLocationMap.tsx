@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/Spinner";
 const LeafletMap = dynamic(() => import("@/components/checkout/LeafletMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[220px] w-full items-center justify-center rounded-[var(--radius-control)] bg-surface-muted">
+    <div className="flex h-[220px] w-full items-center justify-center rounded-[var(--radius-control)] bg-surface-muted sm:h-[280px]">
       <Spinner />
     </div>
   ),

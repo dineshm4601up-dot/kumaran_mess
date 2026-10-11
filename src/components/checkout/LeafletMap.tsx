@@ -60,8 +60,8 @@ export default function LeafletMap({
     <MapContainer
       center={center}
       zoom={hasPin ? PINNED_ZOOM : DEFAULT_ZOOM}
-      style={{ height: "280px", width: "100%" }}
-      className="rounded-[var(--radius-control)]"
+      style={{ width: "100%" }}
+      className="h-[220px] rounded-[var(--radius-control)] sm:h-[280px]"
       dragging={!readOnly || hasPin}
       scrollWheelZoom={!readOnly}
     >

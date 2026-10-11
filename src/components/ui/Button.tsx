@@ -18,8 +18,13 @@ const variantClasses: Record<Variant, string> = {
 
 const sizeClasses: Record<Size, string> = {
   sm: "text-sm px-3 py-1.5 gap-1.5",
-  md: "text-sm px-4 py-2.5 gap-2",
-  lg: "text-base px-5 py-3 gap-2",
+  // min-h-11 (44px) on the two sizes used for primary/standalone actions
+  // (add to cart, place order, confirm/cancel, status changes) so they
+  // hit the ~44px touch-target guidance on phones; "sm" stays compact
+  // since it's used for dense inline/secondary actions (table row edit
+  // links, copy buttons) where that size would look oversized.
+  md: "text-sm px-4 py-2.5 gap-2 min-h-11",
+  lg: "text-base px-5 py-3 gap-2 min-h-11",
 };
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

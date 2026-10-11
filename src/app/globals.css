@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
+/* Phase 11: green-based palette with explicit light/dark tokens.
+   Theming strategy follows Next.js's own "preventing flash before
+   hydration" guide (node_modules/next/dist/docs/01-app/02-guides/
+   preventing-flash-before-hydration.md, "Themes" section): default to
+   light here, let prefers-color-scheme drive dark automatically unless
+   a manual choice was made, and let an explicit [data-theme] attribute
+   (set by an inline head script reading a cookie, before first paint)
+   override either way. No data-theme attribute present at all = follow
+   the OS/browser "system" setting, which is the default state for every
+   visitor who has never touched the toggle. */
 :root {
-  --background: #fffaf3;
-  --foreground: #2b1d14;
+  --background: #ffffff;
+  --foreground: #111827;
 
-  --color-primary: #c84c23;
-  --color-primary-hover: #a93c19;
-  --color-primary-foreground: #fff8f0;
+  --color-primary: #15803d;
+  --color-primary-hover: #126c33;
+  --color-primary-foreground: #ffffff;
 
-  --color-accent: #e8a33d;
-  --color-accent-foreground: #2b1d14;
+  --color-accent: #dcfce7;
+  --color-accent-foreground: #14532d;
 
   --color-surface: #ffffff;
-  --color-surface-muted: #fdf1e3;
-  --color-border: #ecddc9;
+  --color-surface-muted: #f8fafc;
+  --color-border: #e2e8f0;
 
-  --color-muted-foreground: #7a6a5a;
+  --color-muted-foreground: #5b6472;
 
-  --color-success: #2f7a4f;
+  --color-success: #15803d;
   --color-success-foreground: #ffffff;
-  --color-warning: #b6791b;
+  --color-warning: #b45309;
   --color-warning-foreground: #ffffff;
   --color-danger: #c0392b;
   --color-danger-foreground: #ffffff;
@@ -53,25 +63,107 @@
   --radius-control: var(--radius-control);
 }
 
+/* Dark tokens apply automatically when the OS/browser prefers dark and
+   no manual "light" override is active ([data-theme="light"]) ... */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1a1410;
-    --foreground: #f5ece0;
+  :root:not([data-theme="light"]) {
+    --background: #0b1220;
+    --foreground: #f9fafb;
 
-    --color-primary: #e2693a;
-    --color-primary-hover: #ef8257;
-    --color-primary-foreground: #1a1410;
+    --color-primary: #16a34a;
+    --color-primary-hover: #22c55e;
+    --color-primary-foreground: #ffffff;
 
-    --color-surface: #241b14;
-    --color-surface-muted: #2c2118;
-    --color-border: #3a2c20;
+    --color-accent: #14532d;
+    --color-accent-foreground: #dcfce7;
 
-    --color-muted-foreground: #b8a894;
+    --color-surface: #111827;
+    --color-surface-muted: #1f2937;
+    --color-border: #374151;
+
+    --color-muted-foreground: #9ca3af;
+
+    --color-success: #22c55e;
+    --color-success-foreground: #052e16;
+    --color-warning: #f59e0b;
+    --color-warning-foreground: #1f1300;
+    --color-danger: #dc2626;
+    --color-danger-foreground: #ffffff;
   }
+}
+
+/* ... and the same tokens apply unconditionally when the user has
+   explicitly chosen dark via the theme toggle, regardless of OS
+   preference (set as a [data-theme="dark"] attribute on <html> by the
+   inline script in the root layout's <head> and by ThemeToggle). */
+:root[data-theme="dark"] {
+  --background: #0b1220;
+  --foreground: #f9fafb;
+
+  --color-primary: #16a34a;
+  --color-primary-hover: #22c55e;
+  --color-primary-foreground: #ffffff;
+
+  --color-accent: #14532d;
+  --color-accent-foreground: #dcfce7;
+
+  --color-surface: #111827;
+  --color-surface-muted: #1f2937;
+  --color-border: #374151;
+
+  --color-muted-foreground: #9ca3af;
+
+  --color-success: #22c55e;
+  --color-success-foreground: #052e16;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #1f1300;
+  --color-danger: #dc2626;
+  --color-danger-foreground: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Respect "reduce motion" — transitions/animations become instant
+   rather than being removed outright (removing them entirely can hide
+   real state changes; near-zero duration keeps the end state reachable
+   without the motion). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Bill printing (Phase 10): isolates .bill-print-area as the only visible
+   content when printing, regardless of where it's nested in the app
+   shell (header/nav/buttons etc. are hidden rather than needing a
+   separate print-only route). .no-print additionally hides specific
+   elements (action buttons) that would otherwise sit inside the
+   printable area. This is the browser's native print-to-PDF path per
+   requirement B's preference — no PDF generation library involved. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .bill-print-area,
+  .bill-print-area * {
+    visibility: visible;
+  }
+  .bill-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
 }

@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/Spinner";
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[280px] w-full items-center justify-center rounded-[var(--radius-control)] bg-surface-muted">
+    <div className="flex h-[220px] w-full items-center justify-center rounded-[var(--radius-control)] bg-surface-muted sm:h-[280px]">
       <Spinner />
     </div>
   ),
@@ -116,7 +116,7 @@ export function LocationPicker({
                 <button
                   type="button"
                   onClick={() => selectResult(result)}
-                  className="block w-full px-3.5 py-2 text-left text-sm text-foreground hover:bg-surface-muted"
+                  className="block w-full px-3.5 py-2 text-left text-sm text-foreground hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {result.label}
                 </button>

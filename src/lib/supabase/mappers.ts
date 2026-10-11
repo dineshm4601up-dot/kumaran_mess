@@ -1,16 +1,22 @@
 import type {
+  AdminCustomerListItem,
   AdminOrderDetail,
   AdminOrderListItem,
   Category,
   CustomerAddress,
   CustomerOrderDetail,
   CustomerOrderListItem,
+  CustomerWiseReportRow,
   DashboardStats,
+  OrderDetailsReportRow,
   OrderLineItem,
   OrderStatus,
   OrderStatusEvent,
   PaymentStatus,
   Product,
+  ProductWiseReportRow,
+  ReportSummary,
+  SalesTrendPoint,
   ShopSettings,
 } from "@/types";
 
@@ -97,6 +103,13 @@ export function mapAddressRow(row: CustomerAddressRow): CustomerAddress {
 }
 
 export type ShopSettingsRow = {
+  shop_name: string;
+  shop_address: string | null;
+  shop_phone: string | null;
+  whatsapp_number: string | null;
+  gstin: string | null;
+  tax_rate_percent: number | string | null;
+  estimated_delivery_minutes: number | null;
   delivery_fee: number | string;
   min_order_amount: number | string;
   service_radius_km: number | string | null;
@@ -107,6 +120,13 @@ export type ShopSettingsRow = {
 
 export function mapShopSettingsRow(row: ShopSettingsRow): ShopSettings {
   return {
+    shopName: row.shop_name,
+    shopAddress: row.shop_address,
+    shopPhone: row.shop_phone,
+    whatsappNumber: row.whatsapp_number,
+    gstin: row.gstin,
+    taxRatePercent: toNumberOrNull(row.tax_rate_percent),
+    estimatedDeliveryMinutes: row.estimated_delivery_minutes,
     deliveryFee: toNumberOrNull(row.delivery_fee) ?? 0,
     minOrderAmount: toNumberOrNull(row.min_order_amount) ?? 0,
     serviceRadiusKm: toNumberOrNull(row.service_radius_km),
@@ -283,5 +303,145 @@ export function mapDashboardStatsRow(row: DashboardStatsRow): DashboardStats {
     activeOrderCount: Number(row.active_order_count),
     deliveredTodayCount: Number(row.delivered_today_count),
     cancelledTodayCount: Number(row.cancelled_today_count),
+  };
+}
+
+// --- Phase 12: admin reports & customer management -------------------
+
+export type AdminCustomerListRow = {
+  id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  created_at: string;
+  order_count: number | string;
+  delivered_sales: number | string;
+};
+
+export function mapAdminCustomerListRow(row: AdminCustomerListRow): AdminCustomerListItem {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone,
+    email: row.email,
+    createdAt: row.created_at,
+    orderCount: Number(row.order_count),
+    deliveredSales: toNumberOrNull(row.delivered_sales) ?? 0,
+  };
+}
+
+export type ReportSummaryRow = {
+  total_orders: number | string;
+  delivered_orders: number | string;
+  cancelled_orders: number | string;
+  pending_processing_orders: number | string;
+  delivered_sales: number | string;
+  total_delivery_charges: number | string;
+  cod_collected: number | string;
+  cod_pending: number | string;
+  avg_delivered_order_value: number | string;
+};
+
+export function mapReportSummaryRow(row: ReportSummaryRow): ReportSummary {
+  return {
+    totalOrders: Number(row.total_orders),
+    deliveredOrders: Number(row.delivered_orders),
+    cancelledOrders: Number(row.cancelled_orders),
+    pendingProcessingOrders: Number(row.pending_processing_orders),
+    deliveredSales: toNumberOrNull(row.delivered_sales) ?? 0,
+    totalDeliveryCharges: toNumberOrNull(row.total_delivery_charges) ?? 0,
+    codCollected: toNumberOrNull(row.cod_collected) ?? 0,
+    codPending: toNumberOrNull(row.cod_pending) ?? 0,
+    avgDeliveredOrderValue: toNumberOrNull(row.avg_delivered_order_value) ?? 0,
+  };
+}
+
+export type SalesTrendRow = {
+  trend_date: string;
+  order_count: number | string;
+  delivered_sales: number | string;
+};
+
+export function mapSalesTrendRow(row: SalesTrendRow): SalesTrendPoint {
+  return {
+    date: row.trend_date,
+    orderCount: Number(row.order_count),
+    deliveredSales: toNumberOrNull(row.delivered_sales) ?? 0,
+  };
+}
+
+export type CustomerWiseReportRowDb = {
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  order_count: number | string;
+  delivered_count: number | string;
+  cancelled_count: number | string;
+  delivered_sales: number | string;
+  avg_delivered_order_value: number | string;
+  last_order_at: string | null;
+};
+
+export function mapCustomerWiseReportRow(row: CustomerWiseReportRowDb): CustomerWiseReportRow {
+  return {
+    customerId: row.customer_id,
+    customerName: row.customer_name,
+    customerPhone: row.customer_phone,
+    orderCount: Number(row.order_count),
+    deliveredCount: Number(row.delivered_count),
+    cancelledCount: Number(row.cancelled_count),
+    deliveredSales: toNumberOrNull(row.delivered_sales) ?? 0,
+    avgDeliveredOrderValue: toNumberOrNull(row.avg_delivered_order_value) ?? 0,
+    lastOrderAt: row.last_order_at,
+  };
+}
+
+export type ProductWiseReportRowDb = {
+  product_name: string;
+  quantity_sold: number | string;
+  order_count: number | string;
+  total_sales: number | string;
+};
+
+export function mapProductWiseReportRow(row: ProductWiseReportRowDb): ProductWiseReportRow {
+  return {
+    productName: row.product_name,
+    quantitySold: Number(row.quantity_sold),
+    orderCount: Number(row.order_count),
+    totalSales: toNumberOrNull(row.total_sales) ?? 0,
+  };
+}
+
+export type OrderDetailsReportRowDb = {
+  order_id: string;
+  order_number: string;
+  created_at: string;
+  customer_name: string;
+  customer_phone: string;
+  items_summary: string | null;
+  subtotal: number | string;
+  delivery_fee: number | string;
+  tax_amount: number | string;
+  total: number | string;
+  status: string;
+  payment_status: string;
+  payment_updated_at: string | null;
+};
+
+export function mapOrderDetailsReportRow(row: OrderDetailsReportRowDb): OrderDetailsReportRow {
+  return {
+    orderId: row.order_id,
+    orderNumber: row.order_number,
+    createdAt: row.created_at,
+    customerName: row.customer_name,
+    customerPhone: row.customer_phone,
+    itemsSummary: row.items_summary,
+    subtotal: toNumberOrNull(row.subtotal) ?? 0,
+    deliveryFee: toNumberOrNull(row.delivery_fee) ?? 0,
+    taxAmount: toNumberOrNull(row.tax_amount) ?? 0,
+    total: toNumberOrNull(row.total) ?? 0,
+    status: row.status as OrderStatus,
+    paymentStatus: row.payment_status as PaymentStatus,
+    paymentUpdatedAt: row.payment_updated_at,
   };
 }

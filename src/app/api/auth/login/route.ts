@@ -43,5 +43,9 @@ export async function POST(request: Request) {
 
   await createCustomerSession(result.customer_id);
 
-  return NextResponse.json({ ok: true });
+  // Set by an admin-assisted PIN reset (admin_reset_customer_pin) — the
+  // client redirects to /change-pin instead of wherever it would
+  // normally go next (requirement 3, step 7: "require the customer to
+  // change the temporary PIN after their next successful login").
+  return NextResponse.json({ ok: true, mustChangePin: Boolean(result.pin_reset_required) });
 }

@@ -29,6 +29,7 @@ export function CategoryTabs({
             onClick={() => onChange(category.id)}
             className={cn(
               "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               isActive
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-surface text-foreground hover:bg-surface-muted",

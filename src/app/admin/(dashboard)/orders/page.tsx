@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapAdminOrderSearchRow, type AdminOrderSearchRow } from "@/lib/supabase/mappers";
-import { OrderStatusBadge, Badge } from "@/components/ui/Badge";
+import { OrdersTable } from "@/components/admin/OrdersTable";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatCurrency, formatDateTime } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Orders",
@@ -47,54 +45,8 @@ export default async function AdminOrdersPage({
       {orders.length === 0 ? (
         <EmptyState icon="🧾" title={q ? "No matching orders" : "No orders yet"} />
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-border bg-surface">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Order #</th>
-                <th className="px-4 py-2 font-medium">Customer</th>
-                <th className="px-4 py-2 font-medium">Placed</th>
-                <th className="px-4 py-2 font-medium">Total</th>
-                <th className="px-4 py-2 font-medium">Payment</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {orders.map((order) => (
-                <tr key={order.id} className="cursor-pointer hover:bg-surface-muted">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    <Link href={`/admin/orders/${order.id}`} className="block">
-                      {order.orderNumber}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    <Link href={`/admin/orders/${order.id}`} className="block">
-                      {order.customerName}
-                      <span className="block text-xs">{order.customerPhone}</span>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    <Link href={`/admin/orders/${order.id}`} className="block">
-                      {formatDateTime(order.createdAt)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    <Link href={`/admin/orders/${order.id}`} className="block">
-                      {formatCurrency(order.total)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={order.paymentStatus === "collected" ? "success" : "neutral"}>
-                      {order.paymentStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-[var(--radius-card)] border border-border bg-surface">
+          <OrdersTable orders={orders} />
         </div>
       )}
     </div>

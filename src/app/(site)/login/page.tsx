@@ -65,6 +65,14 @@ export default function LoginPage() {
         return;
       }
 
+      // An admin-assisted PIN reset forces a PIN change before anything
+      // else — redirect there regardless of ?next (requirement 3, step 7).
+      if (data.mustChangePin) {
+        router.push("/change-pin");
+        router.refresh();
+        return;
+      }
+
       const next = new URLSearchParams(window.location.search).get("next");
       router.push(next && next.startsWith("/") ? next : "/");
       router.refresh();

@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, OrderStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { InfoBanner } from "@/components/ui/InfoBanner";
 import { OrderLocationMap } from "@/components/admin/OrderLocationMap";
+import { WhatsAppConfirmationButton } from "@/components/admin/WhatsAppConfirmationButton";
+import { CallButton } from "@/components/shared/CallButton";
 import { formatCurrency } from "@/lib/format";
 import { NEXT_STATUS_ACTIONS, canStaffCancel } from "@/lib/order-transitions";
 import type { AdminOrderDetail } from "@/types";
@@ -19,7 +22,17 @@ function formatDateTime(iso: string): string {
   });
 }
 
-export function AdminOrderDetailClient({ order }: { order: AdminOrderDetail }) {
+export function AdminOrderDetailClient({
+  order,
+  whatsAppUrl,
+  whatsAppMessage,
+  customerPhoneDisplay,
+}: {
+  order: AdminOrderDetail;
+  whatsAppUrl: string | null;
+  whatsAppMessage: string;
+  customerPhoneDisplay: string | null;
+}) {
   const router = useRouter();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
@@ -30,6 +43,12 @@ export function AdminOrderDetailClient({ order }: { order: AdminOrderDetail }) {
 
   const nextActions = NEXT_STATUS_ACTIONS[order.status];
   const canCancel = canStaffCancel(order.status);
+  // "After the admin changes an order from pending to confirmed"
+  // (requirement C) — shown for confirmed and every status after it,
+  // not just the instant of the transition, so staff can still open it
+  // later. Never shown for pending (not confirmed yet) or cancelled
+  // (nothing to confirm).
+  const showWhatsAppConfirmation = order.status !== "pending" && order.status !== "cancelled";
 
   async function advanceStatus(status: string) {
     setIsUpdatingStatus(true);
@@ -95,7 +114,12 @@ export function AdminOrderDetailClient({ order }: { order: AdminOrderDetail }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">{order.orderNumber}</h1>
-          <p className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</p>
+            <Link href={`/admin/orders/${order.id}/bill`} className="text-sm font-medium text-primary hover:underline">
+              View Bill
+            </Link>
+          </div>
         </div>
         <OrderStatusBadge status={order.status} />
       </div>
@@ -192,6 +216,11 @@ export function AdminOrderDetailClient({ order }: { order: AdminOrderDetail }) {
               {nextActions.length === 0 && !canCancel && (
                 <p className="text-sm text-muted-foreground">No further status changes are possible.</p>
               )}
+              <CallButton
+                phone={order.customerPhone}
+                label={`Call ${order.customerName.split(" ")[0]}`}
+                variant="outline"
+              />
             </div>
 
             {showCancelForm && (
@@ -217,6 +246,20 @@ export function AdminOrderDetailClient({ order }: { order: AdminOrderDetail }) {
               </div>
             )}
           </section>
+
+          {showWhatsAppConfirmation && (
+            <section className="rounded-[var(--radius-card)] border border-border bg-surface-muted p-4">
+              <h2 className="text-sm font-semibold text-foreground">WhatsApp confirmation</h2>
+              <div className="mt-3">
+                <WhatsAppConfirmationButton
+                  orderId={order.id}
+                  whatsAppUrl={whatsAppUrl}
+                  message={whatsAppMessage}
+                  phoneDisplay={customerPhoneDisplay}
+                />
+              </div>
+            </section>
+          )}
 
           <section className="rounded-[var(--radius-card)] border border-border bg-surface-muted p-4">
             <h2 className="text-sm font-semibold text-foreground">COD payment</h2>

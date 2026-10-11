@@ -3,8 +3,8 @@ import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { mapAdminOrderSearchRow, mapDashboardStatsRow, type AdminOrderSearchRow, type DashboardStatsRow } from "@/lib/supabase/mappers";
 import { StatCard } from "@/components/admin/StatCard";
-import { OrderStatusBadge, Badge } from "@/components/ui/Badge";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { OrdersTable } from "@/components/admin/OrdersTable";
+import { formatCurrency } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -38,11 +38,35 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Today's Orders" value={String(stats.todaysOrderCount)} icon="📦" hint="Placed today, any status" />
-        <StatCard label="Today's Sales" value={formatCurrency(stats.todaysSales)} icon="💰" hint="Placed today, excluding cancelled" />
-        <StatCard label="Pending & Active" value={String(stats.activeOrderCount)} icon="⏳" hint="Not yet delivered or cancelled" />
-        <StatCard label="Delivered Today" value={String(stats.deliveredTodayCount)} icon="✅" />
-        <StatCard label="Cancelled Today" value={String(stats.cancelledTodayCount)} icon="🚫" />
+        <StatCard
+          label="Today's Sales"
+          value={formatCurrency(stats.todaysSales)}
+          icon="💰"
+          hint="Order value placed today, excluding cancelled — not the same as COD actually collected"
+        />
+        <StatCard
+          label="Pending & Active"
+          value={String(stats.activeOrderCount)}
+          icon="⏳"
+          hint="Placed today, not yet delivered or cancelled"
+        />
+        <StatCard
+          label="Delivered Today"
+          value={String(stats.deliveredTodayCount)}
+          icon="✅"
+          hint="Became delivered today — may include orders placed earlier"
+        />
+        <StatCard
+          label="Cancelled Today"
+          value={String(stats.cancelledTodayCount)}
+          icon="🚫"
+          hint="Became cancelled today — may include orders placed earlier"
+        />
       </div>
+      <p className="text-xs text-muted-foreground">
+        These cards count different events (placed vs. delivered vs. cancelled), so they won&apos;t always
+        add up to Today&apos;s Orders — that&apos;s expected, not an error.
+      </p>
 
       <div className="rounded-[var(--radius-card)] border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -51,40 +75,7 @@ export default async function AdminDashboardPage() {
             View all
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Order #</th>
-                <th className="px-4 py-2 font-medium">Customer</th>
-                <th className="px-4 py-2 font-medium">Placed</th>
-                <th className="px-4 py-2 font-medium">Total</th>
-                <th className="px-4 py-2 font-medium">Payment</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {recentOrders.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    <Link href={`/admin/orders/${order.id}`}>{order.orderNumber}</Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{order.customerName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(order.createdAt)}</td>
-                  <td className="px-4 py-3 text-foreground">{formatCurrency(order.total)}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={order.paymentStatus === "collected" ? "success" : "neutral"}>
-                      {order.paymentStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OrdersTable orders={recentOrders} />
       </div>
     </div>
   );

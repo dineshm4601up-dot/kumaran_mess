@@ -1,175 +1,72 @@
-"use client";
-
-import { useState, type FormEvent } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { InputField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 import { InfoBanner } from "@/components/ui/InfoBanner";
+import { getShopSettings } from "@/lib/shop-settings";
+import { buildTelLink } from "@/lib/phone-link";
+import { buildWhatsAppClickToChatUrl, toWhatsAppPhoneDigits } from "@/lib/whatsapp/click-to-chat";
 
-export default function ForgotPinPage() {
-  const router = useRouter();
-  const [step, setStep] = useState<"phone" | "reset">("phone");
-  const [mobile, setMobile] = useState("");
-  const [mobileError, setMobileError] = useState<string | null>(null);
-  const [otp, setOtp] = useState("");
-  const [newPin, setNewPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [resetErrors, setResetErrors] = useState<{ otp?: string; pin?: string }>({});
-  const [formMessage, setFormMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export const metadata: Metadata = {
+  title: "Forgot PIN",
+};
 
-  async function handlePhoneSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
-      setMobileError("Enter a valid 10-digit mobile number.");
-      return;
-    }
-    setMobileError(null);
+// No OTP, no SMS, no self-service reset of any kind — a customer can
+// only ever get a new PIN through the admin-assisted reset workflow
+// (ResetPinDialog / admin_reset_customer_pin(), Phase 12). This page is
+// purely informational: it reads the shop's own contact details and
+// renders a Call/WhatsApp/Back-to-login set of plain links, nothing
+// else. There is no form here, so there is nothing that could change a
+// PIN by someone simply opening this page.
+export default async function ForgotPinPage() {
+  const shop = await getShopSettings();
+  const callHref = buildTelLink(shop.shopPhone);
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/auth/forgot-pin/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: mobile }),
-      });
-      const data = await response.json();
-      setFormMessage(data.message ?? "If that mobile number is registered, a code has been sent.");
-      setStep("reset");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleResetSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextErrors: { otp?: string; pin?: string } = {};
-    if (!/^\d{6}$/.test(otp)) nextErrors.otp = "Enter the 6-digit code.";
-    if (!/^\d{4}$/.test(newPin) || newPin !== confirmPin) {
-      nextErrors.pin = "Enter a 4-digit PIN, matching in both fields.";
-    }
-    setResetErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/auth/forgot-pin/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: mobile, otp, newPin, confirmPin }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setResetErrors({
-          otp: data.error === "invalid_otp" ? "That code is incorrect or has expired." : undefined,
-          pin: data.error === "invalid_pin" ? "Enter a 4-digit PIN, matching in both fields." : undefined,
-        });
-        if (!data.error || (data.error !== "invalid_otp" && data.error !== "invalid_pin")) {
-          setFormMessage("Something went wrong. Please try again.");
-        }
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  if (step === "reset") {
-    return (
-      <div className="mx-auto max-w-md px-4 py-10 sm:px-6">
-        <h1 className="text-2xl font-bold text-foreground">Reset your PIN</h1>
-        {formMessage && (
-          <div className="mt-3">
-            <InfoBanner>{formMessage}</InfoBanner>
-          </div>
-        )}
-
-        <form onSubmit={handleResetSubmit} className="mt-6 flex flex-col gap-4" noValidate>
-          <InputField
-            label="Verification code"
-            required
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            value={otp}
-            onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
-            error={resetErrors.otp}
-            autoComplete="one-time-code"
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <InputField
-              label="New 4-digit PIN"
-              required
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={newPin}
-              onChange={(event) => setNewPin(event.target.value.replace(/\D/g, ""))}
-              error={resetErrors.pin}
-            />
-            <InputField
-              label="Confirm PIN"
-              required
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={confirmPin}
-              onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, ""))}
-            />
-          </div>
-
-          <Button type="submit" size="lg" isLoading={isSubmitting} fullWidth>
-            Reset PIN &amp; log in
-          </Button>
-
-          <button
-            type="button"
-            onClick={() => setStep("phone")}
-            className="text-sm text-muted-foreground hover:text-primary"
-          >
-            Use a different mobile number
-          </button>
-        </form>
-      </div>
-    );
-  }
+  const whatsappDigits = toWhatsAppPhoneDigits(shop.whatsappNumber);
+  const whatsappUrl = whatsappDigits
+    ? buildWhatsAppClickToChatUrl(
+        whatsappDigits,
+        `Hi, I'd like help resetting my ${shop.shopName} account PIN.`,
+      )
+    : null;
 
   return (
     <div className="mx-auto max-w-md px-4 py-10 sm:px-6">
       <h1 className="text-2xl font-bold text-foreground">Forgot your PIN?</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Enter your registered mobile number and we&rsquo;ll send a verification code to reset it.
-      </p>
 
-      <form onSubmit={handlePhoneSubmit} className="mt-6 flex flex-col gap-4" noValidate>
-        <InputField
-          label="Mobile number"
-          required
-          type="tel"
-          inputMode="numeric"
-          maxLength={10}
-          value={mobile}
-          onChange={(event) => setMobile(event.target.value.replace(/\D/g, ""))}
-          error={mobileError ?? undefined}
-          autoComplete="tel"
-        />
+      <div className="mt-4">
+        <InfoBanner>
+          For security reasons, customers cannot reset their PIN directly. Please contact the shop admin to
+          reset your PIN.
+        </InfoBanner>
+      </div>
 
-        <Button type="submit" size="lg" isLoading={isSubmitting} fullWidth>
-          Send verification code
-        </Button>
-      </form>
+      <div className="mt-6 flex flex-col gap-3">
+        {callHref ? (
+          <a href={callHref}>
+            <Button type="button" size="lg" fullWidth>
+              📞 Call Admin
+            </Button>
+          </a>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No contact number is configured yet — please reach out to the shop directly.
+          </p>
+        )}
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        <Link href="/login" className="font-medium text-primary hover:underline">
-          Back to login
+        {whatsappUrl && (
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <Button type="button" variant="outline" size="lg" fullWidth>
+              Contact Admin on WhatsApp
+            </Button>
+          </a>
+        )}
+
+        <Link href="/login">
+          <Button type="button" variant="outline" size="lg" fullWidth>
+            Back to Login
+          </Button>
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

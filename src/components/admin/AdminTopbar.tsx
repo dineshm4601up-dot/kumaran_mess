@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function AdminTopbar({ staffEmail }: { staffEmail: string | null }) {
   const router = useRouter();
@@ -22,11 +23,12 @@ export function AdminTopbar({ staffEmail }: { staffEmail: string | null }) {
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base text-primary-foreground" aria-hidden="true">
           🍲
         </span>
-        <span className="text-sm font-bold text-foreground sm:text-base">Kumaran Mess Admin</span>
+        <span className="hidden text-sm font-bold text-foreground sm:inline sm:text-base">Kumaran Mess Admin</span>
       </Link>
 
-      <div className="flex items-center gap-3">
-        {staffEmail && <span className="hidden text-sm text-muted-foreground sm:inline">{staffEmail}</span>}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {staffEmail && <span className="hidden text-sm text-muted-foreground lg:inline">{staffEmail}</span>}
+        <ThemeToggle />
         <Button variant="outline" size="sm" isLoading={isLoggingOut} onClick={handleLogout}>
           Log out
         </Button>

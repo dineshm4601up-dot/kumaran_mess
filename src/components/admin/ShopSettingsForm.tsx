@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { InputField } from "@/components/ui/FormField";
+import { InputField, TextAreaField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 import { InfoBanner } from "@/components/ui/InfoBanner";
 import type { OrderStatus, ShopSettings } from "@/types";
@@ -16,6 +16,17 @@ const CANCELLABLE_OPTIONS: { value: OrderStatus; label: string }[] = [
 
 export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
   const router = useRouter();
+  const [shopName, setShopName] = useState(settings.shopName);
+  const [shopAddress, setShopAddress] = useState(settings.shopAddress ?? "");
+  const [shopPhone, setShopPhone] = useState(settings.shopPhone ?? "");
+  const [whatsappNumber, setWhatsappNumber] = useState(settings.whatsappNumber ?? "");
+  const [gstin, setGstin] = useState(settings.gstin ?? "");
+  const [taxRatePercent, setTaxRatePercent] = useState(
+    settings.taxRatePercent !== null ? String(settings.taxRatePercent) : "",
+  );
+  const [estimatedDeliveryMinutes, setEstimatedDeliveryMinutes] = useState(
+    settings.estimatedDeliveryMinutes !== null ? String(settings.estimatedDeliveryMinutes) : "",
+  );
   const [deliveryFee, setDeliveryFee] = useState(String(settings.deliveryFee));
   const [minOrderAmount, setMinOrderAmount] = useState(String(settings.minOrderAmount));
   const [serviceRadiusKm, setServiceRadiusKm] = useState(
@@ -50,6 +61,13 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          shopName,
+          shopAddress: shopAddress || null,
+          shopPhone: shopPhone || null,
+          whatsappNumber: whatsappNumber || null,
+          gstin: gstin || null,
+          taxRatePercent: taxRatePercent === "" ? null : Number(taxRatePercent),
+          estimatedDeliveryMinutes: estimatedDeliveryMinutes === "" ? null : Number(estimatedDeliveryMinutes),
           deliveryFee: Number(deliveryFee),
           minOrderAmount: Number(minOrderAmount),
           serviceRadiusKm: serviceRadiusKm === "" ? null : Number(serviceRadiusKm),
@@ -60,7 +78,14 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
       });
 
       if (!response.ok) {
-        setFormError("Something went wrong saving these settings.");
+        const data = await response.json().catch(() => null);
+        const message =
+          data?.error === "invalid_shop_phone"
+            ? "That contact number doesn't look like a valid Indian mobile number."
+            : data?.error === "invalid_whatsapp_number"
+              ? "That WhatsApp number doesn't look like a valid Indian mobile number."
+              : "Something went wrong saving these settings.";
+        setFormError(message);
         return;
       }
 
@@ -73,6 +98,49 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex max-w-lg flex-col gap-4" noValidate>
+      <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+        <h2 className="text-sm font-semibold text-foreground">Shop contact details</h2>
+        <InputField label="Shop display name" required value={shopName} onChange={(event) => setShopName(event.target.value)} />
+        <TextAreaField
+          label="Shop address (optional)"
+          rows={2}
+          value={shopAddress}
+          onChange={(event) => setShopAddress(event.target.value)}
+        />
+        <InputField
+          label="Customer-facing contact number"
+          value={shopPhone}
+          onChange={(event) => setShopPhone(event.target.value)}
+          hint="Shown on bills, and used by the customer-facing 'Call Kumaran Mess' button. An Indian mobile number — validated and normalised on save."
+        />
+        <InputField
+          label="WhatsApp contact number (optional)"
+          value={whatsappNumber}
+          onChange={(event) => setWhatsappNumber(event.target.value)}
+          hint="Only needed if it's different from the contact number above. Used for customer-to-shop WhatsApp links."
+        />
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+        <h2 className="text-sm font-semibold text-foreground">Tax (optional)</h2>
+        <InputField
+          label="GSTIN (optional)"
+          value={gstin}
+          onChange={(event) => setGstin(event.target.value)}
+          hint="Display only — not validated or registered anywhere by this app."
+        />
+        <InputField
+          label="Tax rate (%, optional)"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          value={taxRatePercent}
+          onChange={(event) => setTaxRatePercent(event.target.value)}
+          hint="Leave both this and GSTIN blank to issue plain receipts (no tax breakdown) instead of tax invoices. Applied to new orders only — past orders keep whatever was true when they were placed."
+        />
+      </div>
+
       <InputField
         label="Delivery fee (₹)"
         type="number"
@@ -89,6 +157,15 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
         value={minOrderAmount}
         onChange={(event) => setMinOrderAmount(event.target.value)}
         hint="0 means no minimum."
+      />
+      <InputField
+        label="Estimated delivery time (minutes, optional)"
+        type="number"
+        min="1"
+        step="1"
+        value={estimatedDeliveryMinutes}
+        onChange={(event) => setEstimatedDeliveryMinutes(event.target.value)}
+        hint="Only included in the WhatsApp order-confirmation message when set."
       />
       <InputField
         label="Service radius (km, optional)"

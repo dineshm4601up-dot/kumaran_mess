@@ -45,39 +45,64 @@ export default async function AdminCategoriesPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-card)] border border-border bg-surface">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Slug</th>
-                <th className="px-4 py-2 font-medium">Order</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {categories.map((category) => (
-                <tr key={category.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{category.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{category.slug}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{category.displayOrder}</td>
-                  <td className="px-4 py-3">
+        <div className="rounded-[var(--radius-card)] border border-border bg-surface">
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Slug</th>
+                  <th className="px-4 py-2 font-medium">Order</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {categories.map((category) => (
+                  <tr key={category.id}>
+                    <td className="px-4 py-3 font-medium text-foreground">{category.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{category.slug}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{category.displayOrder}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone={category.isActive ? "success" : "neutral"}>
+                        {category.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link href={`/admin/categories/${category.id}/edit`}>
+                        <Button size="sm" variant="outline">
+                          Edit
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="flex flex-col divide-y divide-border md:hidden">
+            {categories.map((category) => (
+              <li key={category.id} className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">{category.name}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {category.slug} &middot; Order {category.displayOrder}
+                  </p>
+                  <div className="mt-1.5">
                     <Badge tone={category.isActive ? "success" : "neutral"}>
                       {category.isActive ? "Active" : "Inactive"}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/categories/${category.id}/edit`}>
-                      <Button size="sm" variant="outline">
-                        Edit
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <Link href={`/admin/categories/${category.id}/edit`} className="shrink-0">
+                  <Button size="sm" variant="outline">
+                    Edit
+                  </Button>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

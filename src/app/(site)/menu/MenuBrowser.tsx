@@ -6,6 +6,7 @@ import { CategoryTabs } from "@/components/product/CategoryTabs";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useCart } from "@/lib/cart-context";
+import { getSearchQueryWords, matchesProductSearch } from "@/lib/product-search";
 import type { Category, Product } from "@/types";
 
 const ALL_CATEGORY_ID = "all";
@@ -24,14 +25,24 @@ export function MenuBrowser({ products, categories }: { products: Product[]; cat
     [categories],
   );
 
+  // Maps a product's category id to its name so search can match
+  // against the category too (e.g. searching "Tiffin" finds everything
+  // in that category), without needing the full category object.
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category.name])),
+    [categories],
+  );
+
+  const queryWords = useMemo(() => getSearchQueryWords(query), [query]);
+
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesCategory =
         activeCategory === ALL_CATEGORY_ID || product.categoryId === activeCategory;
-      const matchesQuery = product.name.toLowerCase().includes(query.trim().toLowerCase());
-      return matchesCategory && matchesQuery;
+      if (!matchesCategory) return false;
+      return matchesProductSearch(product, categoryNameById.get(product.categoryId) ?? null, queryWords);
     });
-  }, [products, activeCategory, query]);
+  }, [products, activeCategory, queryWords, categoryNameById]);
 
   if (products.length === 0) {
     return (

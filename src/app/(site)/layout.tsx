@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CartProvider } from "@/lib/cart-context";
 import { getCustomerSession } from "@/lib/customer-session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getShopSettings } from "@/lib/shop-settings";
 
 async function getInitialCustomer() {
   const session = await getCustomerSession();
@@ -20,11 +21,11 @@ async function getInitialCustomer() {
 }
 
 export default async function SiteLayout({ children }: { children: ReactNode }) {
-  const initialCustomer = await getInitialCustomer();
+  const [initialCustomer, shopSettings] = await Promise.all([getInitialCustomer(), getShopSettings()]);
 
   return (
     <CartProvider>
-      <Header initialCustomer={initialCustomer} />
+      <Header initialCustomer={initialCustomer} shopPhone={shopSettings.shopPhone} />
       <main className="flex-1">{children}</main>
       <Footer />
     </CartProvider>

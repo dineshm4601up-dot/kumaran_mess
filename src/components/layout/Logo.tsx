@@ -9,7 +9,7 @@ export function Logo() {
       >
         🍲
       </span>
-      <span className="text-lg font-bold tracking-tight text-foreground">Kumaran Mess</span>
+      <span className="hidden text-lg font-bold tracking-tight text-foreground sm:inline">Kumaran Mess</span>
     </Link>
   );
 }

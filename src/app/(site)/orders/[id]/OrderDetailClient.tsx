@@ -104,7 +104,12 @@ export function OrderDetailClient({
         <h1 className="text-xl font-bold text-foreground">{order.orderNumber}</h1>
         <OrderStatusBadge status={order.status} />
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</p>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</p>
+        <Link href={`/orders/${order.id}/bill`} className="text-sm font-medium text-primary hover:underline">
+          View Bill
+        </Link>
+      </div>
 
       {order.status === "cancelled" && (
         <div className="mt-4">

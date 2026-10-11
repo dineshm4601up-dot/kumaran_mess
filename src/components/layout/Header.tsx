@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useCart } from "@/lib/cart-context";
 import { cn } from "@/lib/cn";
+import { buildTelLink } from "@/lib/phone-link";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -13,12 +15,21 @@ const NAV_LINKS = [
   { href: "/orders", label: "My Orders" },
 ];
 
-export function Header({ initialCustomer }: { initialCustomer: { fullName: string } | null }) {
+const FOCUS_RING = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+
+export function Header({
+  initialCustomer,
+  shopPhone,
+}: {
+  initialCustomer: { fullName: string } | null;
+  shopPhone: string | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { itemCount } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const callShopHref = buildTelLink(shopPhone);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -39,7 +50,8 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
               key={link.href}
               href={link.href}
               className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
+                "rounded-[var(--radius-control)] text-sm font-medium transition-colors hover:text-primary",
+                FOCUS_RING,
                 pathname === link.href ? "text-primary" : "text-foreground",
               )}
             >
@@ -56,7 +68,10 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
                 type="button"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="text-sm font-medium text-foreground hover:text-primary disabled:opacity-60"
+                className={cn(
+                  "rounded-[var(--radius-control)] text-sm font-medium text-foreground hover:text-primary disabled:opacity-60",
+                  FOCUS_RING,
+                )}
               >
                 {isLoggingOut ? "Logging out…" : "Log out"}
               </button>
@@ -64,14 +79,35 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
           ) : (
             <Link
               href="/login"
-              className="hidden text-sm font-medium text-foreground hover:text-primary sm:inline-block"
+              className={cn(
+                "hidden rounded-[var(--radius-control)] text-sm font-medium text-foreground hover:text-primary sm:inline-block",
+                FOCUS_RING,
+              )}
             >
               Login
             </Link>
           )}
+          {callShopHref && (
+            <a
+              href={callShopHref}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 sm:w-auto sm:px-3.5",
+                FOCUS_RING,
+              )}
+              aria-label="Call Kumaran Mess"
+              title="Call Kumaran Mess"
+            >
+              <span aria-hidden="true">📞</span>
+              <span className="hidden text-sm font-medium sm:inline">Call Kumaran Mess</span>
+            </a>
+          )}
+          <ThemeToggle />
           <Link
             href="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-lg hover:bg-surface-muted"
+            className={cn(
+              "relative flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-lg hover:bg-surface-muted",
+              FOCUS_RING,
+            )}
             aria-label={`Cart, ${itemCount} item${itemCount === 1 ? "" : "s"}`}
           >
             🛒
@@ -84,7 +120,10 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg md:hidden"
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg md:hidden",
+              FOCUS_RING,
+            )}
             aria-expanded={isMenuOpen}
             aria-label="Toggle navigation menu"
           >
@@ -105,7 +144,8 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
-                    "block rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium",
+                    "block min-h-11 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium",
+                    FOCUS_RING,
                     pathname === link.href
                       ? "bg-surface-muted text-primary"
                       : "text-foreground hover:bg-surface-muted",
@@ -121,7 +161,10 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
                   type="button"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className="block w-full rounded-[var(--radius-control)] px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-surface-muted disabled:opacity-60"
+                  className={cn(
+                    "block min-h-11 w-full rounded-[var(--radius-control)] px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-surface-muted disabled:opacity-60",
+                    FOCUS_RING,
+                  )}
                 >
                   {isLoggingOut ? "Logging out…" : "Log out"}
                 </button>
@@ -136,7 +179,8 @@ export function Header({ initialCustomer }: { initialCustomer: { fullName: strin
                     href={link.href}
                     onClick={() => setIsMenuOpen(false)}
                     className={cn(
-                      "block rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium",
+                      "block min-h-11 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium",
+                      FOCUS_RING,
                       pathname === link.href
                         ? "bg-surface-muted text-primary"
                         : "text-foreground hover:bg-surface-muted",

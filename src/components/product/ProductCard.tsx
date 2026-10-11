@@ -40,10 +40,11 @@ export function ProductCard({
       <div className="flex items-center justify-between gap-2">
         <PriceDisplay amount={product.price} size="sm" />
         <Button
-          size="sm"
+          size="md"
           variant="primary"
           disabled={!product.isAvailable}
           onClick={() => onAddToCart?.(product)}
+          aria-label={`Add ${product.name} to cart`}
         >
           Add
         </Button>
