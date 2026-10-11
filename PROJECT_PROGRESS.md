@@ -1,6 +1,10 @@
 # Kumaran Mess — Project Progress
 
-## Status: a fix for the admin dashboard's inconsistent order counts, plus admin product search and inline sorting — code written, typechecked/linted/built cleanly, and live-verified against the real Supabase project by hand-tracing the new SQL against real current order data (see "Verification performed (dashboard metrics + product search/sort)" below). **One more migration, `20260101000024`, is now pending** on top of `20260101000021`/`22`/`23` (all three already applied, per the previous update below) — until it's applied, the dashboard keeps showing the old (buggy) numbers and the admin Products page's search/sort UI is visible but search doesn't actually filter yet (confirmed live: the page gracefully falls back to showing every product rather than breaking, but ignores the search term until the migration lands — sorting itself already works today, since it runs in JavaScript over whatever the page fetches). Phase 9's "not yet deployed" caveat still stands, unchanged.
+## Status: manual quantity entry added to the inline cart controls (type a number like `100` directly, not just +/−) — code written, typechecked/linted/built cleanly, and verified two ways: 39/39 unit tests on the new pure validation module, plus the exact validation logic run against a real product's real stock count from the live database (see "Verification performed (manual quantity entry)" below). No database/migration involvement — pure client-state/UI on top of the cart context and the +/− controls already built in the previous change. The previously-pending `20260101000024` migration (dashboard metrics + product search) is unrelated and unchanged, see below.
+
+Previous update, still accurate: inline +/− cart quantity controls on the customer product grid — code written, typechecked/linted/built cleanly, and spot-checked against a running dev server with real product data. No database/migration involvement at all — this is a pure client-state/UI change on top of the cart context that already existed.
+
+Previous update, still accurate: a fix for the admin dashboard's inconsistent order counts, plus admin product search and inline sorting — code written, typechecked/linted/built cleanly, and live-verified against the real Supabase project by hand-tracing the new SQL against real current order data. **One more migration, `20260101000024`, is pending** on top of `20260101000021`/`22`/`23` (all three already applied) — until it's applied, the dashboard keeps showing the old (buggy) numbers and the admin Products page's search doesn't actually filter yet (sorting already works today, since it runs in JavaScript over whatever the page fetches). Phase 9's "not yet deployed" caveat still stands, unchanged.
 
 Previous update, still accurate: Phase 12 complete, plus a follow-up fix removing OTP from the customer-facing "Forgot PIN" flow — migrations `20260101000021`, `20260101000022`, and `20260101000023` are applied to the live project (confirmed live — `orders.tax_amount`, `customer_profiles.pin_reset_required`, and the `admin_report_summary` RPC are all present and returning real data). Reports/Customers/PIN-reset are confirmed working against real data.
 
@@ -958,6 +962,141 @@ is fetched, filtered, and ordered, never how an individual product is written. R
 unchanged (`admin_search_products()` is `service_role`-only, same as every other admin RPC, called only after
 the page's existing staff-session gate in the admin layout).
 
+### Fix — inline +/− cart quantity controls on the product grid
+
+**No schema or API changes at all** — this is entirely a client-side UI/state change built on the cart
+context (`src/lib/cart-context.tsx`) that already existed from Phase 5, unmodified. That context already
+exposed exactly what this needed (`addItem`, `setQuantity`, `removeItem`, all keyed by `product.id`, never by
+name) — the only real work was wiring `ProductCard` to read and drive that shared state directly, instead of
+only ever calling `addItem` through a one-way `onAddToCart` prop.
+
+**What changed**: `ProductCard.tsx` now calls `useCart()` itself (previously it only received an `onAddToCart`
+callback prop from its two callers, `MenuBrowser.tsx` and `FeaturedProducts.tsx`, both of which have had that
+prop — and their own now-unneeded `useCart()` import — removed). It derives
+`quantity = lines.find((line) => line.product.id === product.id)?.quantity ?? 0` straight from the shared
+cart lines on every render, so there is no separate per-card quantity state anywhere to drift out of sync
+(requirement 3's "use the existing cart state management rather than creating a separate quantity state for
+each product card", satisfied by construction, not by a syncing effect). When `quantity === 0` it renders the
+existing `Add` button exactly as before; when `quantity > 0` it renders a new compact `−  N  +` control
+instead, calling `setQuantity(product.id, quantity ± 1)` — which already removes the line entirely when the
+result is `0` (that logic already existed in `cart-context.tsx`, untouched).
+
+Because the menu page, the cart page, the header's cart badge, and the checkout summary all read from the
+exact same `CartProvider` instance (one provider, mounted once in `(site)/layout.tsx`, above every page this
+touches), there is nothing to "keep synchronised" as a separate step — they're already looking at the same
+object in memory. Filtering/searching the menu grid only changes *which* `ProductCard`s are rendered, never
+the cart state itself, so quantities survive category switches and search terms without any extra code
+(requirement 3's "preserve quantities correct when search results or category filters change").
+
+**Why a new compact stepper markup instead of reusing `cart/QuantityStepper.tsx` (the cart page's existing
++/− control) as-is**: checked the menu grid's actual breakpoints first (`grid-cols-2 sm:grid-cols-3
+lg:grid-cols-4`, confirmed in both `MenuBrowser.tsx` and `FeaturedProducts.tsx`) and computed the real
+available width — at a 320px viewport, 2 columns, the existing padding/gaps leave only ~112px of content
+width per card. The cart page's stepper (44px buttons either side of a count) plus the price display cannot
+fit in that space on one line; attempting it would either clip or force the browser to add horizontal
+scroll, which the task treats as a hard requirement to avoid ("prevent buttons from wrapping or overflowing
+on small screens"). The new `ProductQuantityStepper` (defined locally in `ProductCard.tsx`, used only there)
+uses 40px buttons — close to, but under, the *preferred* (not required) ~44px target, which the task's own
+wording ("preferably") left room to trade off against the hard overflow-prevention requirement — and the
+price/stepper row uses `flex-wrap` with the stepper wrapper set to `w-full sm:w-auto`, so below the exact
+same `sm:` breakpoint the grid itself uses, the stepper drops to its own right-aligned line below the price
+instead of squeezing beside it; at `sm:` and up (where the grid already gives cards more room), it sits
+inline next to the price exactly as the task's example shows. This was a deliberate tradeoff, stated
+plainly rather than silently shipped as if full 44px-everywhere had been achieved.
+
+**Availability**: the `Add` button's existing `disabled={!product.isAvailable}` is unchanged. New this phase:
+once a product is already in the cart, its stepper's `+` button is also disabled whenever
+`!product.isAvailable` (via a new `increaseDisabled` prop) — so a product that goes out of stock while
+already in someone's cart can't have more added, while `−`/removal always stays available. The existing
+"Out of stock" badge overlaid on the product image is the "clear message" this condition shows (requirement
+4) — no new message component was needed since that badge already exists and already covers exactly this
+case. **No new client-side stock-quantity ceiling was added** — checked first, and confirmed none exists
+today anywhere in the menu/cart flow (only an availability boolean; the actual numeric stock ceiling is
+enforced once, server-side, during checkout's existing revalidation in `CheckoutClient.tsx`, which this fix
+never touched). Adding a new ceiling here would have been a behavior change beyond "respect any *existing*
+stock or quantity restrictions" — there wasn't one to respect at this layer, so none was invented.
+
+**Accessibility**: the stepper's two buttons use the exact `Decrease quantity of {name}` / `Increase quantity
+of {name}` aria-label pattern the task specified verbatim — not coincidentally; this already matches
+`cart/QuantityStepper.tsx`'s existing pattern on the cart page, so the wording is consistent app-wide, not
+newly invented for this one component. Both buttons are native `<button>` elements (inherently keyboard-
+operable) with the same `focus-visible:outline-2 ...` ring used everywhere else in this app since Phase 11,
+and the quantity count uses `aria-live="polite"` so a screen reader announces changes without needing focus
+to move.
+
+**Preserved, unaffected by this fix**: `cart/page.tsx`'s own stepper, the checkout flow and its server-side
+price/stock revalidation, COD totals, delivery fee/tax/bill generation (`lib/bills.ts`), and the product
+image/Tamil name/English description/price block within the card — none of these files were touched.
+
+**Superseded by the next change below**: the "no new client-side stock-quantity ceiling was added" statement
+above described this change's own scope accurately at the time, but the very next change explicitly adds
+one (because it was explicitly asked for this time) — kept here unedited for history rather than rewritten,
+with this note so it isn't read as still describing the current behavior.
+
+### Enhancement — manual quantity entry on the inline stepper
+
+Builds directly on the +/− stepper above: the quantity display in the middle is now an editable numeric
+`<input>` (`type="text" inputMode="numeric"`, not `type="number"` — deliberately, since native number
+inputs let a stray mouse-wheel-while-hovering or the up/down arrow keys silently change the value, which is
+exactly the kind of "accidental quantity change" requirement 2 asks to prevent) instead of a static `<span>`.
+Typing `100` and pressing Enter or clicking away applies it directly to the shared cart — no separate "Apply"
+button, matching the task's own example of typing a value "directly".
+
+**New pure module, `src/lib/quantity-input.ts`** (39 unit tests, `quantity-input.test.ts`, run and passing —
+see Verification below), the same "extract the actual decision logic into a plain, framework-free function"
+approach as `product-search.ts`/`product-sort.ts`:
+- `parseQuantityInput(value)` — a single regex (`/^\d+$/` against the trimmed string) that simultaneously
+  rejects empty input, decimals, negative signs, and any non-digit character, rather than needing one rule
+  per case; also rejects anything beyond `Number.MAX_SAFE_INTEGER` (the literal "integer overflow" case).
+- `resolveQuantityInput(value, { stockLimit, appMaxLimit })` — the actual decision: invalid input is
+  rejected outright (never silently rounded/truncated — requirement: "do not silently truncate invalid
+  values"); an explicit `0` resolves to removal, the same outcome the minus button already produces at zero
+  (requirement: "apply the established remove-at-zero behaviour consistently"); a value within both the
+  stock limit and the app-wide ceiling is accepted as typed; a value exceeding either is clamped down to
+  whichever is smaller, tagged with *why* (`"stock"` or `"max"`) so the UI can show a specific message
+  ("Only 36 left in stock." vs. "Maximum order quantity is 9999.") instead of a generic rejection.
+- `MAX_QUANTITY_PER_ITEM = 9999` — the "reasonable configured application limit" the task asks for when a
+  product effectively has no real stock constraint (a very large or loosely-tracked `stock_quantity`). One
+  named, documented constant, not a magic number buried in a component.
+
+**Stock-aware limits, genuinely new this time** (the previous change explicitly did *not* add this, since
+nothing asked for it then and none existed to "respect"): `ProductCard` now passes
+`stockLimit={product.isAvailable ? product.stock : quantity}` into the stepper. While a product is
+available, typing or clicking past its real stock clamps back down with a visible message; once it becomes
+unavailable, the ceiling becomes whatever is already in the cart, so no further increase (typed or clicked)
+is possible while decreasing/removing always still is — the same rule the +/− buttons already had, now also
+enforced on the typed path, which could otherwise bypass the buttons' own `increaseDisabled` check entirely
+by typing a large number directly.
+
+**The "briefly empty while editing" requirement** is handled by keeping the input's own text in a separate
+`draft` state, distinct from the committed cart `quantity` — nothing is written back to the shared cart
+until `onBlur` or `Enter` fires. Syncing `draft` back to `quantity` after an external change (the +/− buttons,
+or a previous commit) uses the React-documented "adjust state during render" pattern (comparing against a
+`lastSyncedQuantity` state and calling `setState` directly in the render body when they differ) rather than a
+`useEffect`, specifically to stay clear of the `react-hooks/set-state-in-effect` lint rule flagged in earlier
+phases — confirmed clean, no suppression comment needed this time.
+
+**A subtle correctness fix made while building this, not asked for explicitly but necessary for the feature
+to actually work as described**: the +/− buttons now compute their new value from the *input's current
+draft text*, not from the last-committed `quantity` prop. Clicking a button fires a native `blur` on the
+input first (standard browser behavior), which commits whatever was just typed — if the buttons had instead
+read `quantity` from their own closure, there was a real risk of a stale value (captured at the start of
+that render) overwriting what blur had *just* committed a moment earlier, silently discarding a typed
+quantity the instant the customer clicked `+` or `−` right after typing. Reading `draft` instead sidesteps
+this entirely, since `draft` is updated on every keystroke (via `onChange`) and is therefore always current
+by the time any click handler runs, regardless of exactly when blur-vs-click re-renders settle.
+
+**Accessibility**: the input has `aria-label={\`Quantity of ${product.name}\`}` (the exact pattern the task
+specified), is a real `<input>` so Tab/Shift+Tab reach it naturally between the − and + buttons, Enter
+blurs it (triggering the same commit path as clicking away), and `onFocus` selects the existing text so
+typing immediately replaces it rather than requiring a manual select-all first. The validation message
+(when shown) uses `role="status"` so assistive tech announces it without needing focus to move there.
+
+**Preserved, unaffected by this enhancement**: the +/− buttons' own existing behavior and sizing, the
+`sm:`-breakpoint wrap-to-avoid-overflow layout from the previous change, checkout's server-side
+revalidation, COD totals, bill generation, and the product image/Tamil name/English description/price
+block — none of those files were touched beyond `ProductCard.tsx` itself.
+
 ## Environment variables (see `.env.example`)
 | Variable | Used for | Status |
 |---|---|---|
@@ -1272,6 +1411,87 @@ Excel export (requirement E) — see that section above for why it was chosen ov
   `<select>` control and the sortable header icons' actual appearance/contrast in a real browser, in both
   themes — no browser in this sandbox, same recurring limitation as every UI-facing change.
 
+## Verification performed (inline cart quantity controls)
+- `npm run typecheck`, `npm run lint`, `npm run build` all pass. `npm test` still passes at 24/24 — this
+  fix added no new pure-logic module of its own to unit-test (the only "logic" here is a one-line lookup
+  into already-tested cart-context state plus a render-time ternary, not something that benefits from
+  extraction into a separate pure function the way the search/sort fixes did).
+- **No Supabase involvement at all** in this fix, so there was nothing to live-test against the database —
+  verification here means confirming the pages render correctly and the state wiring is correct by reading
+  it closely, plus checking what a running dev server actually serves.
+- **Confirmed against a running dev server, with real product data** (no test fixtures needed — nothing
+  was written to any database):
+  - `/menu` returns 200 and server-renders 9 real `Add {product name} to cart` buttons, zero
+    `Decrease/Increase quantity of` labels — correct, because the cart starts empty on every fresh
+    server-render by design (`cart-context.tsx`'s existing, unmodified comment: "Starts empty to match
+    server-rendered output exactly... the stored cart is applied right after mount"). A real card
+    (`இட்லி (1)`) was inspected directly in the rendered HTML and still shows the unchanged image/name/price
+    block with the `Add` button correctly styled (`bg-primary text-primary-foreground`, `min-h-11`).
+  - `/` (home, `FeaturedProducts`) returns 200 with 2 real `Add ... to cart` buttons rendered the same way.
+  - `/cart` (200) and `/checkout` (307, redirects to login — pre-existing, unrelated behavior) were both
+    hit to confirm neither page was broken by removing the `onAddToCart` prop/the now-unused `useCart`
+    import from `MenuBrowser.tsx`/`FeaturedProducts.tsx`.
+  - No server errors in the dev log across any of the above requests.
+- **Explicitly not verified, stated plainly rather than assumed**: the actual click-driven interaction this
+  whole fix is about — clicking `Add` and seeing it swap to `− 1 +`, clicking `+`/`−` and watching the
+  number change, watching the header badge/cart page update in the same instant, reaching quantity `0` and
+  seeing `Add` return. **None of this can be exercised through a curl-based check**, because the cart only
+  exists client-side (`localStorage`, read after React hydration) and the interaction is pure browser
+  JavaScript (`onClick` handlers) — there is no server round-trip to inspect for any of it, and this sandbox
+  has no browser. What *was* done instead: the exact state-update path was traced by hand through
+  `cart-context.tsx`'s source (`addItem`→creates a `{product, quantity: 1}` line or increments an existing
+  one by `product.id`; `setQuantity`→updates in place or removes the line entirely at `quantity <= 0`) and
+  confirmed those functions are unchanged and already behave exactly as this feature needs — but hand-tracing
+  source code is not the same as watching it happen in a browser, and is not claimed to be. A real
+  browser/device pass is the single most important follow-up for this specific fix, more than for most
+  others in this project, precisely because the entire feature is a client-side interaction with no
+  server-observable signal at all.
+- Mobile layout (does the wrapped stepper actually look right at 320–430px, does nothing clip) and both
+  light/dark themes: not visually confirmed, same recurring no-browser limitation as every UI phase — the
+  40px-button/`sm:`-breakpoint-wrap sizing was computed by hand against the grid's real CSS, not observed.
+
+## Verification performed (manual quantity entry)
+- `npm run typecheck`, `npm run lint`, `npm run build` all pass.
+- **`npm test`: 39/39 pass**, 15 of them new (`quantity-input.test.ts`), directly covering the task's own
+  test list:
+  - Manual entry of `2`, `25`, `100`, and `1000` — all parse and resolve correctly (`1000` specifically
+    checked against both a small real stock limit, where it correctly clamps, and a large one, where it's
+    accepted as typed).
+  - Empty input, decimals (`2.5`, `10.`), negative numbers (`-5`), non-numeric text (`abc`, `12abc`, `1e5`,
+    `NaN`, `Infinity`), and a value beyond `Number.MAX_SAFE_INTEGER` — all rejected as `invalid`, never
+    silently rounded, stripped, or truncated into something else.
+  - Explicit `0` resolves to `remove`, matching the existing minus-to-zero behavior exactly.
+  - A quantity exceeding the stock limit clamps to that limit with `reason: "stock"`; a quantity exceeding
+    the app-wide max (when stock is effectively unlimited) clamps to that instead with `reason: "max"`; a
+    custom `appMaxLimit` overrides the default constant correctly; a stock limit of exactly `0` (the
+    unavailable-product case) resolves any positive entry to `remove`; a quantity exactly equal to the
+    stock limit is accepted, not incorrectly clamped.
+- **Ran the actual validation function against real product stock data fetched live from the Supabase
+  project** (read-only — no data written), rather than only synthetic test fixtures: the real product
+  `நாட்டுக் கோழி` currently has `stock_quantity = 36`. Running `resolveQuantityInput` against it directly
+  confirmed: typing `100` or `1000` both correctly clamp to `{quantity: 36, reason: "stock"}`; `25` and `2`
+  are accepted as typed; `36` itself (exactly at the limit) is accepted, not clamped; `0` resolves to
+  `remove`; `-5` and `2.5` both resolve to `invalid`. A second check against a hypothetical stock of
+  `1,000,000` confirmed `1000` is accepted as-is when stock genuinely isn't the binding constraint —
+  demonstrating both halves of requirement 4 ("prevent entering more than the available quantity" /
+  "support large quantities... within a reasonable application limit when the shop has no stock limit")
+  against the same real data point, not two different hypothetical scenarios.
+- **Confirmed against a running dev server**: `/menu` still returns 200 and server-renders the same 9 real
+  `Add {name} to cart` buttons as before (cart empty on a fresh server render, as designed since before this
+  change), with zero `Quantity of` labels present — correct, since the editable input only renders once a
+  product is already in the cart, same as the stepper it replaced. No server errors in the dev log.
+- **Not verified, stated plainly, same as the previous change and for the identical reason**: the actual
+  click/type-driven interaction — selecting the input's text on focus, typing `100` and watching it apply on
+  blur/Enter, the error message appearing and clearing, and the subtle blur-before-click ordering fix
+  actually preventing a typed value from being discarded by an immediate button click. All of this is
+  pure browser-side JavaScript with no server round-trip to inspect through this sandbox's tools, so it was
+  verified by reasoning through the exact event/render ordering in the code (documented inline in
+  `ProductCard.tsx`) and by the pure-function tests above, not by watching it happen. A real device/browser
+  pass — specifically including "type a large number, then immediately tap +" — is the most important
+  remaining check for this feature.
+- Mobile layout, keyboard-only operation, and both light/dark themes for the new input and its error
+  message: not visually confirmed, same recurring no-browser limitation as every UI phase.
+
 ## Verification performed this phase (Phase 2)
 No Supabase CLI, Docker, or local Postgres was available in this sandbox, so the migrations could **not**
 be executed against a real database here — that is the main gap to be aware of. What was done instead:
@@ -1413,11 +1633,26 @@ successful cancellation from an allowed status and a rejected one from a disallo
 
 ## Outstanding issues / known gaps
 
-**New: migration `20260101000024` is pending** (the dashboard-metrics fix and `admin_search_products()`).
-Until it's applied: the dashboard shows the old, inconsistent numbers (confirmed live — see "Verification
-performed (dashboard metrics + product search/sort)" above); the admin Products page's search box is
-visible but doesn't filter (falls back to showing every product rather than breaking); sorting already
-works regardless, since it runs in JavaScript over whatever the page fetched.
+**New: the manual quantity-entry input's actual typing/blur/Enter behavior has never been seen in a real
+browser either** — same root cause as the item below it (pure client-side JavaScript, nothing a server
+round-trip can expose), now extended to cover typing itself, the select-on-focus convenience, the
+validation error message appearing/clearing, and specifically the blur-before-click ordering fix that
+prevents a typed value from being discarded by an immediately-following `+`/`−` click. Verified via 39
+passing unit tests on the extracted pure logic and by running that same logic against a real product's real
+stock count, but not by watching a real finger/mouse actually do any of this.
+
+**The inline cart quantity controls' click-driven behavior (the +/− buttons themselves) has never been seen
+in a real browser** — this sandbox cannot exercise client-side-only JavaScript interactions at all (no server
+round-trip exists to inspect), so this is a bigger-than-usual gap for this specific feature. Everything
+server-observable (page renders, correct initial `Add` state, no broken imports/pages) was checked; the
+`Add`→stepper swap, `+`/`−` clicks, and cross-page sync were only verified by reading the unchanged
+`cart-context.tsx` logic carefully, not by watching them happen.
+
+**Migration `20260101000024` is still pending** (the dashboard-metrics fix and `admin_search_products()`,
+unrelated to and unaffected by this cart-controls change). Until it's applied: the dashboard shows the old,
+inconsistent numbers; the admin Products page's search box is visible but doesn't filter (falls back to
+showing every product rather than breaking); sorting already works regardless, since it runs in JavaScript
+over whatever the page fetched.
 
 **Update, confirmed during the forgot-PIN OTP-removal fix: all three migrations Phase 12 needed
 (`20260101000021`, `20260101000022`, `20260101000023`) are now applied to the live project** — the paragraph
@@ -1568,7 +1803,19 @@ still a valid value, just unused).
 - The map-pin UI is still not built; registration collects a plain-text address only (see migration 0014).
 
 ## Next phase
-**First: apply migration `20260101000024_dashboard_stats_and_product_search.sql`** (Supabase SQL Editor,
+**First, and most urgent given what this sandbox genuinely cannot test: open the real menu or home page on
+an actual phone/browser and click through the full `Add` → `− [1] +` quantity flow, including typing
+directly into the field** — tap `Add` on a couple of different products and confirm each shows its own
+independent stepper; click into the quantity field and type `100` (or whatever a real product's stock
+comfortably allows), then press Enter and confirm it applies; try typing something larger than a real
+product's stock and confirm it clamps with a visible message; try typing `0` and confirm it removes the
+item; try clearing the field entirely, then clicking away, and confirm it reverts rather than removing the
+item; type a new value and *immediately* tap `+` right after, to specifically exercise the blur-before-click
+ordering fix; confirm the header cart badge and `/cart` page total update in step throughout; try all of
+this while a search term or category filter is active. This is the one feature in the whole project so far
+where no amount of server-side checking substitutes for actually doing this by hand.
+
+**Then: apply migration `20260101000024_dashboard_stats_and_product_search.sql`** (Supabase SQL Editor,
 same as always — no CLI/Docker/psql access in this sandbox), then confirm the dashboard actually shows the
 predicted numbers from this fix's hand-traced verification above (as of this writing: `todays_order_count=7,
 active_order_count=0, delivered_today_count=5, cancelled_today_count=3` — though by the time this is read,

@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { CategoryTabs } from "@/components/product/CategoryTabs";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useCart } from "@/lib/cart-context";
 import { getSearchQueryWords, matchesProductSearch } from "@/lib/product-search";
 import type { Category, Product } from "@/types";
 
@@ -16,7 +15,6 @@ export function MenuBrowser({ products, categories }: { products: Product[]; cat
   const initialSlug = searchParams.get("category");
   const initialCategory = categories.find((category) => category.slug === initialSlug)?.id ?? ALL_CATEGORY_ID;
 
-  const { addItem } = useCart();
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [query, setQuery] = useState("");
 
@@ -80,7 +78,7 @@ export function MenuBrowser({ products, categories }: { products: Product[]; cat
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} onAddToCart={addItem} />
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}
